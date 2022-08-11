@@ -38,8 +38,7 @@ class App:
 
     @classmethod
     def do_you_have_an_account(cls):
-        account_response = int(input("Do you have an account with us?\n1. Yes\n2. No\n3. Exit\n"))
-        return account_response
+        return int(input("Do you have an account with us?\n1. Yes\n2. No\n3. Exit\n"))
 
     @classmethod
     def login_verification(cls, username, password):
@@ -52,26 +51,27 @@ class App:
     @classmethod
     def welcome(cls):
         print("Welcome to I should be Asleep Budget App.")
-        if cls.do_you_have_an_account() == 1:
+        response=cls.do_you_have_an_account()
+        if response == 1:
             while App.logged_in is False:
-                username = input("Type in your username information.   john    \n").lower()
-                password = input("Type in your password information.This is Case-Sensitive    Abc123    \n")
+                username = input("Type in your username information.   username=a    \n").lower()
+                password = input("Type in your password information.This is Case-Sensitive    password=a    \n")
                 cls.login_verification(username, password)
             return username
-        elif cls.do_you_have_an_account() == 2:
+        elif response == 2:
+            App.logged_in = True
             return cls.add_account()
-        else:
-            sys.exit()
+        elif response == 3:
+            exit()
 
     @staticmethod
     def first_question(current_user):
-        first_response = int(input("Hello  " +current_user +' what will you be doing today? Please enter the number corresponding with the options.\n1. Check Balance \n2. See transactions \n3. Deposit \n4. Spend \n5. Withdraw \n6. Transfer\n7. Make New Category\n8. See Bar table of your percent spending\n9. Log Out\n'))
+        first_response = int(input("Hello " +current_user +' what will you be doing today? Please enter the number corresponding with the options.\n1. Check Balance \n2. See transactions \n3. Deposit \n4. Spend \n5. Withdraw \n6. Transfer\n7. Make New Category\n8. See Bar table of your percent spending\n9. Log Out\n'))
         if first_response == 7 or first_response==8 or first_response==9:
             App.first_response_not_seven_or_eight = False
             return first_response
         else:
             return first_response
-
 
     @staticmethod
     def second_question():
@@ -93,12 +93,14 @@ class App:
 
     @classmethod
     def complete_run(cls):
-        name_input=cls.current_user()
-        if name_input==3:
-            exit()
-        current_id =cls.login_dictionary[name_input][1]
-        while cls.logged_in is True:
-            cls.system_response(cls.first_question(name_input), cls.second_question(), current_id)
+        while True:
+            name_input=cls.current_user()
+            try:
+                current_id = App.login_dictionary[name_input][1]
+            except:
+                print("Please pick a number in the menu.\n")
+            while cls.logged_in is True:
+                cls.system_response(cls.first_question(name_input), cls.second_question(), current_id)
 
     @staticmethod
     def system_response(first_response, second_response, current_id):
@@ -129,8 +131,12 @@ class App:
             amount = float(input("How much would you like to transfer from " + second_response.name + "?\n"))
             if second_response.expense_check(amount, current_id) is True:
                 print("To which budget? Input the number corresponding to the Category")
-                second_response.transfer_method()
+                option_left=second_response.transfer_method()
                 transfer_response = int(input())
+                while (transfer_response not in option_left) is True:
+                    print("Please select a number on the menu.\n")
+                    option_left = second_response.transfer_method()
+                    transfer_response = int(input())
                 Category.transfer(second_response,  amount, transfer_response, current_id)
         if first_response == 7:
             name_of_category = input("Name of the new Category?\n")
@@ -175,9 +181,6 @@ class App:
                 except:
                     string = string + "   "
             print(string)
-
-
-
 
 #######################################################################################################################
 class Category:
@@ -253,9 +256,12 @@ class Category:
         return filter
 
     def transfer_method(self):
+        remaining_options=[]
         for category in Category.all:
             if category != self:
                 print(str(category.id) + ". " + category.name)
+                remaining_options.append(category.id)
+        return remaining_options
 
     @classmethod
     def print_every_category(cls):
@@ -310,7 +316,10 @@ class Category:
         return " ${:.2f}".format(saving)
 
     def category_spending_ratio(self,current_id):
-        return round((eval(self.category_spending(current_id)[2:]) / eval(self.category_saving(current_id)[2:])) * 100, -1)
+        try:
+            return round((eval(self.category_spending(current_id)[2:]) / eval(self.category_saving(current_id)[2:])) * 100, -1)
+        except:
+            return 0
 
     @classmethod
     def expense_ranking(cls):
@@ -357,12 +366,15 @@ class Transaction:
 
     @classmethod
     def print_transactions(cls, list, current_id):
-        number_of_asterisk = round((30 - len(str(list[0].category))) / 2)
-        print((number_of_asterisk * "*" + str(list[0].category) + number_of_asterisk * "*"))
-        for transaction in list:
-            length_space = 30 - len(transaction.description) - len(transaction.amount)
-            print(transaction.description[0:24] + length_space * " " + transaction.amount[0:8])
-        return "Total: " + str(list[0].category.category_total(current_id))
+        if len(list)==0:
+            return "There are currently no transactions"
+        else:
+            number_of_asterisk = round((30 - len(str(list[0].category))) / 2)
+            print((number_of_asterisk * "*" + str(list[0].category) + number_of_asterisk * "*"))
+            for transaction in list:
+                length_space = 30 - len(transaction.description) - len(transaction.amount)
+                print(transaction.description[0:24] + length_space * " " + transaction.amount[0:8])
+            return "Total: " + str(list[0].category.category_total(current_id))
 
     #
     def __repr__(self):
@@ -389,4 +401,5 @@ groc_obj = Transaction("groc", -4, food_obj ,1)
 first_user = App("a", "a")
 second_user = App("john", "Abc123")
 #############################################################################################################
+#print(type(App.second_question()))
 App.complete_run()
